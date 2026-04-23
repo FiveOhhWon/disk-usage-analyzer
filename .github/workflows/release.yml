@@ -231,6 +231,11 @@ jobs:
         with:
           name: ${{ matrix.artifact_name }}
           path: |
+            target/release/bundle/**/*.AppImage
+            target/release/bundle/**/*.deb
+            target/release/bundle/**/*.dmg
+            target/release/bundle/**/*.exe
+            target/release/bundle/**/*.msi
             src-tauri/target/release/bundle/**/*.AppImage
             src-tauri/target/release/bundle/**/*.deb
             src-tauri/target/release/bundle/**/*.dmg
@@ -330,7 +335,24 @@ jobs:
           curl --fail --silent --show-error \
             "${{ steps.deploy_worker.outputs.base_url }}/api/releases/latest?channel=${{ needs.prepare.outputs.channel }}" \
             | tee latest-manifest.json
-          node -e "const fs=require('node:fs'); const m=JSON.parse(fs.readFileSync('latest-manifest.json','utf8')); if (!Array.isArray(m.artifacts) || m.artifacts.length === 0) process.exit(1);"
+          node <<'NODE'
+          const fs = require("node:fs");
+          const manifest = JSON.parse(fs.readFileSync("latest-manifest.json", "utf8"));
+          if (!Array.isArray(manifest.artifacts) || manifest.artifacts.length === 0) {
+            throw new Error("Release manifest does not contain artifacts");
+          }
+          const platforms = new Set(manifest.artifacts.map((artifact) => artifact.platform));
+          for (const platform of ["macos", "windows", "linux"]) {
+            if (!platforms.has(platform)) {
+              throw new Error(`Release manifest is missing ${platform} artifact`);
+            }
+          }
+          fs.writeFileSync("release-platforms.txt", [...platforms].sort().join("\n") + "\n");
+          NODE
+          while IFS= read -r platform; do
+            curl --fail --silent --show-error --location --head \
+              "${{ steps.deploy_worker.outputs.base_url }}/download/${{ needs.prepare.outputs.channel }}/${platform}"
+          done < release-platforms.txt
 
       - name: Create or update GitHub release
         shell: bash

@@ -79,6 +79,28 @@ const nightlyManifest = {
       downloadUrl:
         "https://disk-usage-analyzer-downloads.example.workers.dev/artifacts/nightly/0.1.0-nightly.20260423.7/macos/Disk%20Usage%20Analyzer.dmg",
     },
+    {
+      platform: "windows",
+      target: "x86_64-pc-windows-msvc",
+      bundle: "nsis",
+      fileName: "Disk Usage Analyzer Setup.exe",
+      size: 7,
+      sha256: "e".repeat(64),
+      r2Key: "artifacts/nightly/0.1.0-nightly.20260423.7/windows/Disk%20Usage%20Analyzer%20Setup.exe",
+      downloadUrl:
+        "https://disk-usage-analyzer-downloads.example.workers.dev/artifacts/nightly/0.1.0-nightly.20260423.7/windows/Disk%20Usage%20Analyzer%20Setup.exe",
+    },
+    {
+      platform: "linux",
+      target: "x86_64-unknown-linux-gnu",
+      bundle: "appimage",
+      fileName: "Disk Usage Analyzer.AppImage",
+      size: 7,
+      sha256: "d".repeat(64),
+      r2Key: "artifacts/nightly/0.1.0-nightly.20260423.7/linux/Disk%20Usage%20Analyzer.AppImage",
+      downloadUrl:
+        "https://disk-usage-analyzer-downloads.example.workers.dev/artifacts/nightly/0.1.0-nightly.20260423.7/linux/Disk%20Usage%20Analyzer.AppImage",
+    },
   ],
 };
 
@@ -107,7 +129,7 @@ describe("downloads Worker", () => {
     expect(await response.json()).toEqual(nightlyManifest);
   });
 
-  it("streams the latest artifact for a platform from the manifest", async () => {
+  it("streams the latest artifact for each supported platform from the manifest", async () => {
     const env = makeEnv({
       "manifests/nightly/latest.json": {
         body: JSON.stringify(nightlyManifest),
@@ -117,15 +139,31 @@ describe("downloads Worker", () => {
         body: "dmgdata",
         httpMetadata: { contentType: "application/x-apple-diskimage" },
       },
+      "artifacts/nightly/0.1.0-nightly.20260423.7/windows/Disk%20Usage%20Analyzer%20Setup.exe": {
+        body: "exedata",
+        httpMetadata: { contentType: "application/vnd.microsoft.portable-executable" },
+      },
+      "artifacts/nightly/0.1.0-nightly.20260423.7/linux/Disk%20Usage%20Analyzer.AppImage": {
+        body: "appimage",
+        httpMetadata: { contentType: "application/octet-stream" },
+      },
     });
 
-    const response = await worker.fetch(new Request("https://downloads.example/download/nightly/macos"), env);
+    const cases = [
+      ["macos", "application/x-apple-diskimage", "Disk Usage Analyzer.dmg", "f".repeat(64), "dmgdata"],
+      ["windows", "application/vnd.microsoft.portable-executable", "Disk Usage Analyzer Setup.exe", "e".repeat(64), "exedata"],
+      ["linux", "application/octet-stream", "Disk Usage Analyzer.AppImage", "d".repeat(64), "appimage"],
+    ] as const;
 
-    expect(response.status).toBe(200);
-    expect(response.headers.get("content-type")).toBe("application/x-apple-diskimage");
-    expect(response.headers.get("content-disposition")).toBe('attachment; filename="Disk Usage Analyzer.dmg"');
-    expect(response.headers.get("x-checksum-sha256")).toBe("f".repeat(64));
-    expect(await response.text()).toBe("dmgdata");
+    for (const [platform, contentType, fileName, sha256, body] of cases) {
+      const response = await worker.fetch(new Request(`https://downloads.example/download/nightly/${platform}`), env);
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-type")).toBe(contentType);
+      expect(response.headers.get("content-disposition")).toBe(`attachment; filename="${fileName}"`);
+      expect(response.headers.get("x-checksum-sha256")).toBe(sha256);
+      expect(await response.text()).toBe(body);
+    }
   });
 
   it("streams a pinned artifact by channel, version, platform, and file", async () => {
