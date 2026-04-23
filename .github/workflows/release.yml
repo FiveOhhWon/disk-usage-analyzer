@@ -1,0 +1,353 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Release channel.
+        required: true
+        default: nightly
+        type: choice
+        options:
+          - nightly
+          - stable
+      version:
+        description: Override release version. Required for manual stable releases.
+        required: false
+        type: string
+  schedule:
+    - cron: "18 8 * * *"
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  R2_BUCKET: disk-usage-analyzer-releases
+  WORKER_CONFIG: cloudflare/downloads/wrangler.jsonc
+
+jobs:
+  prepare:
+    name: Prepare release metadata
+    runs-on: ubuntu-22.04
+    outputs:
+      channel: ${{ steps.meta.outputs.channel }}
+      version: ${{ steps.meta.outputs.version }}
+      release_tag: ${{ steps.meta.outputs.release_tag }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+      created_at: ${{ steps.meta.outputs.created_at }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compute release metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          created_at="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
+          package_version="$(node -p "require('./package.json').version")"
+
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            channel="stable"
+            release_tag="${GITHUB_REF_NAME}"
+            version="${GITHUB_REF_NAME#v}"
+            prerelease="false"
+          elif [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            channel="${{ inputs.channel }}"
+            if [[ -n "${{ inputs.version }}" ]]; then
+              version="${{ inputs.version }}"
+            elif [[ "${{ inputs.channel }}" == "stable" ]]; then
+              echo "Manual stable releases require the version input." >&2
+              exit 1
+            else
+              version="${package_version}-nightly.$(date -u +%Y%m%d).${GITHUB_RUN_NUMBER}"
+            fi
+            if [[ "${channel}" == "stable" ]]; then
+              release_tag="v${version}"
+              prerelease="false"
+            else
+              release_tag="nightly-$(date -u +%Y%m%d)-${GITHUB_RUN_NUMBER}"
+              prerelease="true"
+            fi
+          else
+            channel="nightly"
+            version="${package_version}-nightly.$(date -u +%Y%m%d).${GITHUB_RUN_NUMBER}"
+            release_tag="nightly-$(date -u +%Y%m%d)-${GITHUB_RUN_NUMBER}"
+            prerelease="true"
+          fi
+
+          {
+            echo "channel=${channel}"
+            echo "version=${version}"
+            echo "release_tag=${release_tag}"
+            echo "prerelease=${prerelease}"
+            echo "created_at=${created_at}"
+          } >> "${GITHUB_OUTPUT}"
+
+  quality-gate:
+    name: Quality gate
+    runs-on: ubuntu-22.04
+    needs: prepare
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            curl \
+            file \
+            libayatana-appindicator3-dev \
+            libssl-dev \
+            librsvg2-dev \
+            libwebkit2gtk-4.1-dev \
+            libxdo-dev \
+            patchelf \
+            wget
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache Rust build output
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply release version
+        run: pnpm release:set-version "${{ needs.prepare.outputs.version }}"
+
+      - name: Check release versions
+        run: pnpm release:check-version
+
+      - name: Run full verification
+        run: pnpm verify
+
+  build:
+    name: Build ${{ matrix.platform }}
+    needs:
+      - prepare
+      - quality-gate
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos
+            os: macos-latest
+            bundles: dmg
+            artifact_name: tauri-macos
+          - platform: windows
+            os: windows-latest
+            bundles: nsis
+            artifact_name: tauri-windows
+          - platform: linux
+            os: ubuntu-22.04
+            bundles: appimage deb
+            artifact_name: tauri-linux
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            curl \
+            file \
+            libayatana-appindicator3-dev \
+            libfuse2 \
+            libssl-dev \
+            librsvg2-dev \
+            libwebkit2gtk-4.1-dev \
+            libxdo-dev \
+            patchelf \
+            wget
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build output
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply release version
+        run: pnpm release:set-version "${{ needs.prepare.outputs.version }}"
+
+      - name: Build Tauri bundle
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        with:
+          args: --ci --bundles ${{ matrix.bundles }}
+
+      - name: Upload Tauri bundles
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: |
+            src-tauri/target/release/bundle/**/*.AppImage
+            src-tauri/target/release/bundle/**/*.deb
+            src-tauri/target/release/bundle/**/*.dmg
+            src-tauri/target/release/bundle/**/*.exe
+            src-tauri/target/release/bundle/**/*.msi
+          if-no-files-found: error
+
+  publish:
+    name: Publish downloads
+    runs-on: ubuntu-22.04
+    needs:
+      - prepare
+      - build
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download bundle artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+
+      - name: Ensure R2 bucket exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! pnpm exec wrangler r2 bucket create "${R2_BUCKET}"; then
+            echo "R2 bucket may already exist; continuing."
+          fi
+
+      - name: Deploy download Worker
+        id: deploy_worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm cf:deploy 2>&1 | tee deploy.log
+          base_url="$(grep -Eo 'https://[^[:space:]]+\.workers\.dev' deploy.log | tail -n 1)"
+          if [[ -z "${base_url}" ]]; then
+            echo "Could not discover workers.dev URL from Wrangler deploy output." >&2
+            exit 1
+          fi
+          echo "base_url=${base_url}" >> "${GITHUB_OUTPUT}"
+
+      - name: Prepare release manifest and upload layout
+        run: |
+          pnpm release:prepare -- \
+            --input release-artifacts \
+            --output release-upload \
+            --channel "${{ needs.prepare.outputs.channel }}" \
+            --version "${{ needs.prepare.outputs.version }}" \
+            --commit "${GITHUB_SHA}" \
+            --created-at "${{ needs.prepare.outputs.created_at }}" \
+            --base-url "${{ steps.deploy_worker.outputs.base_url }}"
+
+      - name: Upload artifacts and manifests to R2
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            key="${file#release-upload/}"
+            content_type="application/octet-stream"
+            case "${file}" in
+              *.json) content_type="application/json" ;;
+              *.dmg) content_type="application/x-apple-diskimage" ;;
+              *.exe) content_type="application/vnd.microsoft.portable-executable" ;;
+              *.msi) content_type="application/x-msi" ;;
+              *.deb) content_type="application/vnd.debian.binary-package" ;;
+            esac
+            pnpm exec wrangler r2 object put "${R2_BUCKET}/${key}" \
+              --file "${file}" \
+              --content-type "${content_type}" \
+              --cache-control "public, max-age=31536000, immutable" \
+              --force
+          done < <(find release-upload -type f ! -name 'release-summary.md' -print0)
+
+      - name: Smoke test release manifest
+        run: |
+          curl --fail --silent --show-error \
+            "${{ steps.deploy_worker.outputs.base_url }}/api/releases/latest?channel=${{ needs.prepare.outputs.channel }}" \
+            | tee latest-manifest.json
+          node -e "const fs=require('node:fs'); const m=JSON.parse(fs.readFileSync('latest-manifest.json','utf8')); if (!Array.isArray(m.artifacts) || m.artifacts.length === 0) process.exit(1);"
+
+      - name: Create or update GitHub release
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_tag="${{ needs.prepare.outputs.release_tag }}"
+          release_title="Disk Usage Analyzer ${{ needs.prepare.outputs.version }}"
+          if gh release view "${release_tag}" >/dev/null 2>&1; then
+            gh release edit "${release_tag}" \
+              --title "${release_title}" \
+              --notes-file release-upload/release-summary.md
+          else
+            args=(release create "${release_tag}" --target "${GITHUB_SHA}" --title "${release_title}" --notes-file release-upload/release-summary.md)
+            if [[ "${{ needs.prepare.outputs.prerelease }}" == "true" ]]; then
+              args+=(--prerelease)
+            else
+              args+=(--latest)
+            fi
+            gh "${args[@]}"
+          fi

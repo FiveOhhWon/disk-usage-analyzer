@@ -1,0 +1,32 @@
+[package]
+name = "disk-usage"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description.workspace = true
+
+[lib]
+name = "disk_usage_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[dependencies]
+anyhow.workspace = true
+du-core = { path = "../crates/du-core" }
+serde.workspace = true
+serde_json.workspace = true
+sysinfo = "0.38"
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-store = "2"
+thiserror.workspace = true
+trash = "5"
+uuid.workspace = true
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dev-dependencies]
+tempfile.workspace = true

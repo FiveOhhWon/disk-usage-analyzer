@@ -1,0 +1,139 @@
+:root {
+  color-scheme: light dark;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  color: #182022;
+  background: #f7f8f6;
+}
+
+body {
+  margin: 0;
+}
+
+.shell {
+  display: grid;
+  min-height: 100vh;
+  grid-template-rows: 1fr auto;
+}
+
+.hero {
+  align-content: center;
+  box-sizing: border-box;
+  min-height: 78vh;
+  padding: clamp(32px, 8vw, 96px);
+  background:
+    linear-gradient(120deg, rgba(247, 248, 246, 0.92), rgba(247, 248, 246, 0.72)),
+    radial-gradient(circle at 82% 18%, rgba(0, 116, 105, 0.22), transparent 34%),
+    linear-gradient(135deg, #eef2ee, #e2edea 52%, #f8f5ef);
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: #006d65;
+}
+
+h1 {
+  max-width: 900px;
+  margin: 0;
+  font-size: clamp(2.5rem, 8vw, 6.5rem);
+  line-height: 0.98;
+  letter-spacing: 0;
+}
+
+.lede {
+  max-width: 640px;
+  margin: 28px 0 0;
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  line-height: 1.55;
+  color: #3c484b;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 36px;
+}
+
+.actions a {
+  display: inline-flex;
+  min-width: 120px;
+  justify-content: center;
+  border: 1px solid #0c3535;
+  border-radius: 8px;
+  padding: 12px 18px;
+  color: #ffffff;
+  background: #0c3535;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.actions a:focus-visible,
+.actions a:hover {
+  background: #00746b;
+  border-color: #00746b;
+}
+
+.panel {
+  padding: 26px clamp(24px, 8vw, 96px) 36px;
+  border-top: 1px solid rgba(12, 53, 53, 0.14);
+  background: #ffffff;
+}
+
+.panel h2 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
+.panel p {
+  max-width: 760px;
+  margin: 0;
+  line-height: 1.6;
+  color: #3c484b;
+}
+
+.panel a {
+  color: #006d65;
+  font-weight: 700;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color: #f2f6f4;
+    background: #111819;
+  }
+
+  .hero {
+    background:
+      linear-gradient(120deg, rgba(17, 24, 25, 0.95), rgba(17, 24, 25, 0.74)),
+      radial-gradient(circle at 82% 18%, rgba(47, 168, 143, 0.22), transparent 34%),
+      linear-gradient(135deg, #152122, #142b2c 52%, #2b2b24);
+  }
+
+  .eyebrow,
+  .panel a {
+    color: #64d3bd;
+  }
+
+  .lede,
+  .panel p {
+    color: #c6d2cf;
+  }
+
+  .panel {
+    border-top-color: rgba(242, 246, 244, 0.12);
+    background: #111819;
+  }
+
+  .actions a {
+    border-color: #64d3bd;
+    color: #0a1717;
+    background: #64d3bd;
+  }
+}

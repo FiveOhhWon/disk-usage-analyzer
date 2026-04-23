@@ -1,0 +1,63 @@
+{
+  "name": "disk-usage-analyzer",
+  "version": "0.1.0",
+  "description": "Cross-platform disk usage explorer built with Tauri, Rust, React, and TypeScript.",
+  "license": "MIT",
+  "author": "Levi Smith",
+  "homepage": "https://github.com/LCSmith87/disk-usage-analyzer#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LCSmith87/disk-usage-analyzer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/LCSmith87/disk-usage-analyzer/issues"
+  },
+  "packageManager": "pnpm@10.28.2",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 1420",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest",
+    "verify": "pnpm test --run && pnpm build && pnpm cf:typecheck && cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build --ci",
+    "tauri:build:no-bundle": "tauri build --ci --no-bundle",
+    "release:check-version": "node scripts/check-release-version.mjs",
+    "release:set-version": "node scripts/set-release-version.mjs",
+    "release:prepare": "node scripts/prepare-release-artifacts.mjs",
+    "cf:typecheck": "tsc --project cloudflare/downloads/tsconfig.json --noEmit",
+    "cf:types": "wrangler types --config cloudflare/downloads/wrangler.jsonc cloudflare/downloads/src/worker-configuration.d.ts",
+    "cf:deploy": "wrangler deploy --config cloudflare/downloads/wrangler.jsonc"
+  },
+  "dependencies": {
+    "@tanstack/react-virtual": "^3.13.13",
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-dialog": "^2.4.1",
+    "@tauri-apps/plugin-store": "^2.4.1",
+    "lucide-react": "^0.561.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.10.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.2",
+    "jsdom": "^27.3.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.7",
+    "vitest": "^4.0.15",
+    "wrangler": "^4.84.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "workerd"
+    ]
+  }
+}
