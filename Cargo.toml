@@ -5,8 +5,8 @@ resolver = "2"
 [workspace.package]
 edition = "2021"
 license = "MIT"
-repository = "https://github.com/LCSmith87/disk-usage-analyzer"
-homepage = "https://github.com/LCSmith87/disk-usage-analyzer"
+repository = "https://github.com/FiveOhhWon/disk-usage-analyzer"
+homepage = "https://github.com/FiveOhhWon/disk-usage-analyzer"
 description = "Cross-platform disk usage explorer built with Tauri, Rust, React, and TypeScript."
 version = "0.1.0"
 

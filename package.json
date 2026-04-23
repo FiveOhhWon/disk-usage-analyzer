@@ -4,13 +4,13 @@
   "description": "Cross-platform disk usage explorer built with Tauri, Rust, React, and TypeScript.",
   "license": "MIT",
   "author": "Levi Smith",
-  "homepage": "https://github.com/LCSmith87/disk-usage-analyzer#readme",
+  "homepage": "https://github.com/FiveOhhWon/disk-usage-analyzer#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/LCSmith87/disk-usage-analyzer.git"
+    "url": "git+https://github.com/FiveOhhWon/disk-usage-analyzer.git"
   },
   "bugs": {
-    "url": "https://github.com/LCSmith87/disk-usage-analyzer/issues"
+    "url": "https://github.com/FiveOhhWon/disk-usage-analyzer/issues"
   },
   "packageManager": "pnpm@10.28.2",
   "type": "module",
