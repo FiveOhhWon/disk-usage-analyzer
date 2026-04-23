@@ -25,6 +25,7 @@ permissions:
   contents: write
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   R2_BUCKET: disk-usage-analyzer-releases
   WORKER_CONFIG: cloudflare/downloads/wrangler.jsonc
 
