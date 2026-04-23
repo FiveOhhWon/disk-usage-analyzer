@@ -2,6 +2,7 @@
 /node_modules/
 /dist/
 /src-tauri/gen/
+/.vite/
 /.wrangler/
 /release-artifacts/
 /release-upload/
