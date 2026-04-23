@@ -23,7 +23,7 @@ button {
 
 .app-shell {
   display: grid;
-  grid-template-columns: 292px minmax(0, 1fr);
+  grid-template-columns: 280px minmax(0, 1fr);
   height: 100vh;
   background: #f3f5f7;
 }
@@ -248,7 +248,7 @@ button {
 
 .content-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
   min-height: 0;
 }
 
@@ -257,13 +257,14 @@ button {
   grid-template-rows: 38px minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
   border-right: 1px solid #d7dde4;
 }
 
 .table-header,
 .file-row {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) 128px 128px 92px 112px;
+  grid-template-columns: minmax(220px, 1fr) 112px 112px 82px 100px;
   align-items: center;
 }
 
@@ -293,7 +294,7 @@ button {
 
 .virtual-spacer {
   position: relative;
-  min-width: 760px;
+  min-width: 626px;
 }
 
 .file-row {
@@ -360,6 +361,11 @@ button {
 
 .row-actions {
   gap: 5px;
+}
+
+.row-actions .icon-button.compact {
+  width: 26px;
+  height: 26px;
 }
 
 .row-bar {
@@ -436,6 +442,25 @@ button {
 @media (max-width: 1100px) {
   .app-shell {
     grid-template-columns: 250px minmax(0, 1fr);
+  }
+
+  .content-grid {
+    grid-template-columns: minmax(0, 1fr) 260px;
+  }
+
+  .table-header,
+  .file-row {
+    grid-template-columns: minmax(200px, 1fr) 100px 100px 74px 94px;
+  }
+
+  .virtual-spacer {
+    min-width: 568px;
+  }
+}
+
+@media (max-width: 960px) {
+  .app-shell {
+    grid-template-columns: 240px minmax(0, 1fr);
   }
 
   .content-grid {

@@ -5,10 +5,32 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use du_core::{
     scan_path, NodeKind, ScanEvent, ScanOptions, SortBy, SortDirection, SortSpec, TopKind,
 };
+use serde_json::json;
 use tempfile::TempDir;
 
 fn write_file(path: &Path, bytes: usize) {
     fs::write(path, vec![b'x'; bytes]).unwrap();
+}
+
+#[test]
+fn serializes_scan_progress_events_for_tauri_frontend() {
+    let event = ScanEvent::Progress {
+        entries_scanned: 12,
+        bytes_scanned: 2048,
+        current_path: Path::new("/tmp/example").to_path_buf(),
+    };
+
+    let serialized = serde_json::to_value(event).unwrap();
+
+    assert_eq!(
+        serialized,
+        json!({
+            "type": "progress",
+            "entriesScanned": 12,
+            "bytesScanned": 2048,
+            "currentPath": "/tmp/example",
+        })
+    );
 }
 
 #[test]
