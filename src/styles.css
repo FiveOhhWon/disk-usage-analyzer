@@ -391,8 +391,11 @@ button {
 }
 
 .scan-progress small {
-  max-width: min(620px, 80%);
+  display: block;
+  width: min(620px, 80%);
+  min-width: 0;
   overflow: hidden;
+  text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

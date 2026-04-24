@@ -12,6 +12,7 @@ const { values } = parseArgs({
     commit: { type: "string" },
     "created-at": { type: "string" },
     "base-url": { type: "string" },
+    signed: { type: "string" },
   },
 });
 
@@ -30,6 +31,7 @@ const result = await buildReleaseFiles({
   commit: values.commit,
   createdAt: values["created-at"] ?? new Date().toISOString(),
   baseUrl: values["base-url"],
+  signed: values.signed === "true",
 });
 
 console.log(`Prepared ${result.manifest.artifacts.length} artifacts for ${result.manifest.version}`);

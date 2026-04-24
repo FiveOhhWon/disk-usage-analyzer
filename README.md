@@ -58,7 +58,44 @@ Required GitHub secrets:
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
 
-Optional signing secrets are documented in `.github/workflows/release.yml`.
+### Signing
+
+Unsigned release publishing remains allowed when signing secrets are absent. If
+signing secrets are present, the release workflow treats signing as required and
+fails the build when the certificate import or signing step fails.
+
+macOS signing requires:
+
+- `APPLE_CERTIFICATE`: base64 of a Developer ID Application `.p12` export that
+  includes the private key.
+- `APPLE_CERTIFICATE_PASSWORD`: password used when exporting the `.p12`.
+- `APPLE_SIGNING_IDENTITY`: keychain signing identity, such as
+  `Developer ID Application: Example LLC (TEAMID)`.
+- `APPLE_ID`, `APPLE_PASSWORD`, and `APPLE_TEAM_ID` for notarization.
+
+Create the macOS certificate secret with:
+
+```bash
+openssl base64 -A -in /path/to/DeveloperIDApplication.p12 -out certificate-base64.txt
+```
+
+Windows signing requires:
+
+- `WINDOWS_CERTIFICATE`: base64 of the code-signing `.pfx`.
+- `WINDOWS_CERTIFICATE_PASSWORD`: password used when exporting the `.pfx`.
+- `WINDOWS_CERTIFICATE_THUMBPRINT`: certificate thumbprint from the Windows
+  certificate store.
+
+Optional Windows repository variables:
+
+- `WINDOWS_TIMESTAMP_URL`, defaulting to `http://timestamp.digicert.com`.
+- `WINDOWS_DIGEST_ALGORITHM`, defaulting to `sha256`.
+
+Create the Windows certificate secret with:
+
+```powershell
+certutil -encode certificate.pfx base64cert.txt
+```
 
 ## Notes
 

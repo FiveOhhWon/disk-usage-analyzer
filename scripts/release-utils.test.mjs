@@ -62,8 +62,10 @@ describe("buildReleaseFiles", () => {
         commit: "abc1234",
         createdAt: "2026-04-23T20:00:00.000Z",
         baseUrl: "https://disk-usage-analyzer-downloads.example.workers.dev",
+        signed: true,
       });
 
+      expect(result.manifest.signed).toBe(true);
       expect(result.manifest.artifacts.map((artifact) => artifact.platform)).toEqual(["macos", "windows"]);
       expect(result.manifest.artifacts[0]).toMatchObject({
         fileName: "Disk Usage Analyzer_0.1.0_aarch64.dmg",

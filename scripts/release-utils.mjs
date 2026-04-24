@@ -91,7 +91,7 @@ function encodeUrlPath(parts) {
 }
 
 export async function buildReleaseFiles(options) {
-  const { inputDir, outputDir, channel, version, commit, createdAt, baseUrl } = options;
+  const { inputDir, outputDir, channel, version, commit, createdAt, baseUrl, signed = false } = options;
 
   if (!supportedChannels.has(channel)) {
     throw new Error(`Unsupported release channel: ${channel}`);
@@ -135,7 +135,7 @@ export async function buildReleaseFiles(options) {
     version,
     commit,
     createdAt,
-    signed: false,
+    signed,
     artifacts,
   };
 
