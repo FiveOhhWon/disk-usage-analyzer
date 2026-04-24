@@ -342,6 +342,7 @@ jobs:
               --file "${file}" \
               --content-type "${content_type}" \
               --cache-control "public, max-age=31536000, immutable" \
+              --remote \
               --force
           done < <(find release-upload -type f ! -name 'release-summary.md' -print0)
 
