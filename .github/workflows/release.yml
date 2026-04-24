@@ -218,6 +218,7 @@ jobs:
 
       - name: Import macOS signing certificate
         if: runner.os == 'macOS' && env.HAS_APPLE_SIGNING == 'true'
+        continue-on-error: true
         shell: bash
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
@@ -242,6 +243,7 @@ jobs:
 
       - name: Import Windows signing certificate
         if: runner.os == 'Windows' && env.HAS_WINDOWS_SIGNING == 'true'
+        continue-on-error: true
         shell: pwsh
         env:
           WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
@@ -256,6 +258,7 @@ jobs:
 
       - name: Configure Windows signing
         if: runner.os == 'Windows' && env.HAS_WINDOWS_SIGNING == 'true'
+        continue-on-error: true
         shell: bash
         env:
           WINDOWS_CERTIFICATE_THUMBPRINT: ${{ secrets.WINDOWS_CERTIFICATE_THUMBPRINT }}
@@ -274,7 +277,9 @@ jobs:
           NODE
 
       - name: Build signed Tauri bundle
+        id: tauri_build_signed
         if: (runner.os == 'macOS' && env.HAS_APPLE_SIGNING == 'true') || (runner.os == 'Windows' && env.HAS_WINDOWS_SIGNING == 'true')
+        continue-on-error: true
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -285,8 +290,13 @@ jobs:
         with:
           args: --ci --bundles ${{ matrix.bundles }}
 
+      - name: Clear failed signed bundle output
+        if: steps.tauri_build_signed.outcome == 'failure'
+        shell: bash
+        run: rm -rf target/release/bundle src-tauri/target/release/bundle
+
       - name: Build unsigned Tauri bundle
-        if: runner.os == 'Linux' || (runner.os == 'macOS' && env.HAS_APPLE_SIGNING != 'true') || (runner.os == 'Windows' && env.HAS_WINDOWS_SIGNING != 'true')
+        if: runner.os == 'Linux' || (runner.os == 'macOS' && (env.HAS_APPLE_SIGNING != 'true' || steps.tauri_build_signed.outcome == 'failure')) || (runner.os == 'Windows' && (env.HAS_WINDOWS_SIGNING != 'true' || steps.tauri_build_signed.outcome == 'failure'))
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -320,7 +330,7 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      RELEASE_SIGNED: ${{ secrets.APPLE_CERTIFICATE != '' && secrets.APPLE_CERTIFICATE_PASSWORD != '' && secrets.APPLE_SIGNING_IDENTITY != '' && secrets.WINDOWS_CERTIFICATE != '' && secrets.WINDOWS_CERTIFICATE_PASSWORD != '' && secrets.WINDOWS_CERTIFICATE_THUMBPRINT != '' }}
+      RELEASE_SIGNED: "false"
 
     steps:
       - name: Checkout

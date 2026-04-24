@@ -61,8 +61,8 @@ Required GitHub secrets:
 ### Signing
 
 Unsigned release publishing remains allowed when signing secrets are absent. If
-signing secrets are present, the release workflow treats signing as required and
-fails the build when the certificate import or signing step fails.
+signing secrets are present, the release workflow attempts signed builds first,
+then falls back to unsigned installers when certificate import or signing fails.
 
 macOS signing requires:
 
