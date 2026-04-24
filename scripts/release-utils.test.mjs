@@ -68,7 +68,7 @@ describe("buildReleaseFiles", () => {
       expect(result.manifest.artifacts[0]).toMatchObject({
         fileName: "Disk Usage Analyzer_0.1.0_aarch64.dmg",
         r2Key:
-          "artifacts/nightly/0.1.0-nightly.20260423.7/macos/Disk%20Usage%20Analyzer_0.1.0_aarch64.dmg",
+          "artifacts/nightly/0.1.0-nightly.20260423.7/macos/Disk Usage Analyzer_0.1.0_aarch64.dmg",
         downloadUrl:
           "https://disk-usage-analyzer-downloads.example.workers.dev/artifacts/nightly/0.1.0-nightly.20260423.7/macos/Disk%20Usage%20Analyzer_0.1.0_aarch64.dmg",
       });
@@ -76,7 +76,7 @@ describe("buildReleaseFiles", () => {
       const copied = await stat(
         path.join(
           outputDir,
-          "artifacts/nightly/0.1.0-nightly.20260423.7/macos/Disk%20Usage%20Analyzer_0.1.0_aarch64.dmg",
+          "artifacts/nightly/0.1.0-nightly.20260423.7/macos/Disk Usage Analyzer_0.1.0_aarch64.dmg",
         ),
       );
       expect(copied.size).toBe(3);

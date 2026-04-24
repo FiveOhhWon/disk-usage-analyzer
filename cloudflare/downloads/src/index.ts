@@ -32,6 +32,16 @@ function isUnsafeSegment(rawSegment: string) {
   }
 }
 
+function decodeSafeSegment(rawSegment: string) {
+  if (isUnsafeSegment(rawSegment)) {
+    throw new Response(JSON.stringify({ error: "invalid_artifact_path" }), {
+      status: 400,
+      headers: jsonHeaders,
+    });
+  }
+  return decodeURIComponent(rawSegment);
+}
+
 function attachmentFileName(fileName: string) {
   return fileName.replaceAll("\\", "_").replaceAll('"', '\\"');
 }
@@ -52,8 +62,11 @@ async function readLatestManifest(env: Env, channel: ReleaseChannel): Promise<Re
   return validateManifest(manifest);
 }
 
-async function streamArtifact(env: Env, key: string, artifact?: ReleaseArtifact) {
-  const object = await env.RELEASES.get(key);
+async function streamArtifact(env: Env, key: string, artifact?: ReleaseArtifact, method = "GET") {
+  let object = await env.RELEASES.get(key);
+  if (!object && key.includes("%")) {
+    object = await env.RELEASES.get(decodeURIComponent(key));
+  }
   if (!object) {
     return jsonResponse({ error: "artifact_not_found" }, { status: 404 });
   }
@@ -69,7 +82,7 @@ async function streamArtifact(env: Env, key: string, artifact?: ReleaseArtifact)
     headers.set("content-length", String(artifact.size));
   }
 
-  return new Response(object.body, { headers });
+  return new Response(method === "HEAD" ? null : object.body, { headers });
 }
 
 async function handleLatestManifest(request: Request, env: Env) {
@@ -83,7 +96,7 @@ async function handleLatestManifest(request: Request, env: Env) {
   });
 }
 
-async function handleLatestDownload(parts: string[], env: Env) {
+async function handleLatestDownload(parts: string[], env: Env, method: string) {
   const channel = assertReleaseChannel(parts[1]);
   const platform = assertReleasePlatform(parts[2]);
   const manifest = await readLatestManifest(env, channel);
@@ -91,29 +104,30 @@ async function handleLatestDownload(parts: string[], env: Env) {
   if (!artifact) {
     return jsonResponse({ error: "platform_not_found" }, { status: 404 });
   }
-  return streamArtifact(env, artifact.r2Key, artifact);
+  return streamArtifact(env, artifact.r2Key, artifact, method);
 }
 
-async function handlePinnedArtifact(parts: string[], env: Env) {
+async function handlePinnedArtifact(parts: string[], env: Env, method: string) {
   if ((parts.length !== 4 && parts.length !== 5) || parts.some(isUnsafeSegment)) {
     return jsonResponse({ error: "invalid_artifact_path" }, { status: 400 });
   }
   const channel = assertReleaseChannel(parts[1]);
+  const decodedParts = parts.map(decodeSafeSegment);
 
   if (parts.length === 5) {
     assertReleasePlatform(parts[3]);
-    return streamArtifact(env, parts.join("/"));
+    return streamArtifact(env, decodedParts.join("/"), undefined, method);
   }
 
-  const version = parts[2];
-  const fileName = parts[3];
+  const version = decodedParts[2];
+  const fileName = decodedParts[3];
   const prefix = `artifacts/${channel}/${version}/`;
   const listed = await env.RELEASES.list({ prefix, limit: 100 });
   const match = listed.objects.find((object) => object.key.split("/").at(-1) === fileName);
   if (!match) {
     return jsonResponse({ error: "artifact_not_found" }, { status: 404 });
   }
-  return streamArtifact(env, match.key);
+  return streamArtifact(env, match.key, undefined, method);
 }
 
 async function route(request: Request, env: Env) {
@@ -129,10 +143,10 @@ async function route(request: Request, env: Env) {
       return await handleLatestManifest(request, env);
     }
     if (parts[0] === "download") {
-      return await handleLatestDownload(parts, env);
+      return await handleLatestDownload(parts, env, request.method);
     }
     if (parts[0] === "artifacts") {
-      return await handlePinnedArtifact(parts, env);
+      return await handlePinnedArtifact(parts, env, request.method);
     }
     return env.ASSETS.fetch(request);
   } catch (error) {

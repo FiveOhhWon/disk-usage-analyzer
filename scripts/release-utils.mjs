@@ -82,7 +82,11 @@ async function sha256File(filePath) {
   return hash.digest("hex");
 }
 
-function encodeKey(parts) {
+function joinKey(parts) {
+  return parts.join("/");
+}
+
+function encodeUrlPath(parts) {
   return parts.map((part) => encodeURIComponent(part)).join("/");
 }
 
@@ -107,14 +111,14 @@ export async function buildReleaseFiles(options) {
   for (const artifactPath of artifactFiles) {
     const classification = classifyArtifact(artifactPath);
     const fileName = path.basename(artifactPath);
-    const r2Key = encodeKey(["artifacts", channel, version, classification.platform, fileName]);
+    const r2Key = joinKey(["artifacts", channel, version, classification.platform, fileName]);
     const outputPath = path.join(outputDir, r2Key);
     const fileStat = await stat(artifactPath);
 
     await mkdir(path.dirname(outputPath), { recursive: true });
     await copyFile(artifactPath, outputPath);
 
-    const downloadUrl = new URL(`/${r2Key}`, base).toString();
+    const downloadUrl = new URL(`/${encodeUrlPath(["artifacts", channel, version, classification.platform, fileName])}`, base).toString();
     artifacts.push({
       ...classification,
       fileName,
