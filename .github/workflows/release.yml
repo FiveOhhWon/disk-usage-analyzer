@@ -315,7 +315,7 @@ jobs:
 
       - name: Prepare release manifest and upload layout
         run: |
-          pnpm release:prepare -- \
+          pnpm release:prepare \
             --input release-artifacts \
             --output release-upload \
             --channel "${{ needs.prepare.outputs.channel }}" \
