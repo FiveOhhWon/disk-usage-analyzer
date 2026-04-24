@@ -211,7 +211,9 @@ jobs:
       - name: Apply release version
         run: pnpm release:set-version "${{ needs.prepare.outputs.version }}"
 
-      - name: Build Tauri bundle
+      - name: Build Tauri bundle with optional signing
+        id: tauri_build_signed
+        continue-on-error: true
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -223,6 +225,19 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        with:
+          args: --ci --bundles ${{ matrix.bundles }}
+
+      - name: Clear failed signed bundle output
+        if: steps.tauri_build_signed.outcome == 'failure'
+        shell: bash
+        run: rm -rf target/release/bundle src-tauri/target/release/bundle
+
+      - name: Build unsigned Tauri bundle after signing failure
+        if: steps.tauri_build_signed.outcome == 'failure'
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: --ci --bundles ${{ matrix.bundles }}
 
